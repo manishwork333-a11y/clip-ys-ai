@@ -1,0 +1,111 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clip YS AI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h2>✂ Clip YS <span>AI</span></h2>
+      <p class="muted">PERSONAL STUDIO</p>
+      <nav>
+        <a class="active" href="#">⌂ Dashboard</a>
+        <a href="#editor">✂ Clip Generator</a>
+        <a href="#settings">⚙ Settings</a>
+        <a href="#projects">▣ Projects</a>
+      </nav>
+      <div class="private">● PRIVATE WORKSPACE</div>
+    </aside>
+    <main>
+      <header>
+        <div>
+          <p class="muted">YOUR PERSONAL WORKSPACE</p>
+          <h1>Dashboard</h1>
+        </div>
+        <span class="status">● PERSONAL</span>
+      </header>
+      <section class="welcome">
+        <p>WELCOME TO ClIP YS AI</p>
+        <h2>Turn Long Videos Into Short Clips.</h2>
+        <p>Find your best moments with AI.</p>
+      </section>
+      <section class="panel" id="editor">
+        <h2>Video Input</h2>
+        <input id="videoUrl" type="url" placeholder="Paste YouTube or Twitch link">
+        <label class="upload">
+          Choose an authorized video file
+          <input id="videoFile" type="file" accept="video/*">
+        </label>
+        <video id="preview" controls hidden></video>
+      </section>
+      <section class="panel">
+        <h2>Clip Settings</h2>
+        <div class="fields">
+          <label>Number of clips
+            <select id="clipCount">
+              <option>5</option>
+              <option selected>10</option>
+              <option>15</option>
+              <option>20</option>
+            </select>
+          </label>
+          <label>Clip duration
+            <select id="duration">
+              <option>15-30 sec</option>
+              <option selected>20-45 sec</option>
+              <option>45-60 sec</option>
+            </select>
+          </label>
+          <label>Video ratio
+            <select id="ratio">
+              <option>9:16</option>
+              <option>16:9</option>
+              <option>1:1</option>
+            </select>
+          </label>
+          <label>Quality
+            <select id="quality">
+              <option>720p</option>
+              <option selected>1080p</option>
+            </select>
+          </label>
+        </div>
+      </section>
+      <section class="panel" id="settings">
+        <h2>Editing Settings</h2>
+        <label class="toggle">Auto Captions
+          <input type="checkbox" id="captions" checked>
+        </label>
+        <label class="toggle">Smart Zoom
+          <input type="checkbox" id="zoom" checked>
+        </label>
+        <label class="toggle">Background Music
+          <input type="checkbox" id="music">
+        </label>
+        <label class="toggle">Sound Effects
+          <input type="checkbox" id="effects">
+        </label>
+        <label>Caption Font
+          <select id="font">
+            <option>Arial</option>
+            <option>Roboto</option>
+            <option>Montserrat</option>
+            <option>Anton</option>
+          </select>
+        </label>
+      </section>
+      <button id="generate">Generate Clips →</button>
+      <p id="message" class="muted"></p>
+      <section class="panel" id="projects">
+        <h2>Recent Projects</h2>
+        <p class="muted">Your projects will appear here.</p>
+      </section>
+    </main>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

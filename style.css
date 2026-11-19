@@ -1,0 +1,109 @@
+
+/* CLIP YS AI - PREMIUM DESIGN */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #080D18;
+    color: #FFFFFF;
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+}
+
+header, nav {
+    background: #101A2D;
+    padding: 20px;
+    border-bottom: 1px solid #263650;
+}
+
+h1, h2, h3 {
+    color: #FFFFFF;
+    margin-bottom: 15px;
+}
+
+p {
+    color: #A9B7CB;
+    line-height: 1.6;
+}
+
+button {
+    background: linear-gradient(135deg, #1677FF, #00B8FF);
+    color: white;
+    border: none;
+    padding: 13px 22px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 5px;
+}
+
+button:hover {
+    opacity: 0.85;
+}
+
+input, textarea, select {
+    background: #111D30;
+    color: white;
+    border: 1px solid #30415D;
+    padding: 13px;
+    border-radius: 9px;
+    width: 100%;
+    margin: 8px 0;
+}
+
+input:focus, textarea:focus {
+    outline: 1px solid #1685FF;
+}
+
+a {
+    color: #48A7FF;
+    text-decoration: none;
+}
+
+section, article, .card, .box, .panel {
+    background: #111B2D;
+    border: 1px solid #263751;
+    border-radius: 14px;
+    padding: 20px;
+    margin: 12px 0;
+}
+
+.container, main {
+    width: 100%;
+    max-width: 1200px;
+    margin: auto;
+    padding: 20px;
+}
+
+img, video {
+    max-width: 100%;
+    border-radius: 12px;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+@media (max-width: 600px) {
+    .container, main {
+        padding: 12px;
+    }
+
+    section, article, .card, .box, .panel {
+        padding: 14px;
+    }
+
+    h1 {
+        font-size: 25px;
+    }
+
+    button {
+        width: 100%;
+        margin: 6px 0;
+    }
+}

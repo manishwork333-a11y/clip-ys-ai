@@ -1,89 +1,38 @@
 
-/* =================================
-   CLIP YS AI - VIDEO UPLOAD SYSTEM
-================================= */
+/* CLIP YS AI - UPDATED UPLOAD AND GENERATE SYSTEM */
 
 document.addEventListener("DOMContentLoaded", function () {
 
-    const up
-async function uploadVideoToServer(file) {
-    const formData = new FormData();
-    formData.append("video", file);
+    const uploadInput = document.getElementById("videoFile");
+    const preview = document.getElementById("preview");
+    const message = document.getElementById("message");
+    const generateButton = document.getElementById("generate");
 
-    try {
-        const response = await fetch("http://localhost:5000/upload", {
-            method: "POST",
-            body: formData
-        });
+    const API = "https://clip-ys-ai.onrender.com";
 
-        const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error(result.error || "Upload failed");
-        }
-
-        alert("Video uploaded successfully!");
-        console.log(result);
-
-    } catch (error) {
-        alert("Backend connection failed: " + error.message);
-    }
-}
-loadInput = document.createElement("input");
-    uploadInput.type = "file";
-    uploadInput.accept = "video/*";
-    uploadInput.style.display = "none";
-
-    document.body.appendChild(uploadInput);
-
-    const uploadButtons = document.querySelectorAll(
-        'button, .upload-btn, #uploadBtn, [data-action="upload"]'
-    );
-
-    uploadButtons.forEach(function (button) {
-        if (
-            button.textContent.toLowerCase().includes("upload") ||
-            button.textContent.toLowerCase().includes("video") ||
-            button.id === "uploadBtn" ||
-            button.classList.contains("upload-btn")
-        ) {
-            button.addEventListener("click", function () {
-                uploadInput.click();
-            });
-        }
-    });
-
-    const preview = document.createElement("video");
-
-    preview.controls = true;
-    preview.style.width = "100%";
-    preview.style.maxWidth = "600px";
-    preview.style.marginTop = "15px";
-    preview.style.borderRadius = "12px";
-    preview.style.display = "none";
-
-    const status = document.createElement("p");
-    status.style.marginTop = "12px";
-
-    const container = document.createElement("div");
-    container.id = "clipys-upload-preview";
-    container.style.marginTop = "20px";
-
-    container.appendChild(preview);
-    container.appendChild(status);
-
-    document.body.appendChild(container);
-
+    let uploadedFilename = null;
+    let uploadedFile = null;
     let currentVideoURL = null;
+    let isProcessing = false;
+
+    if (!uploadInput || !preview || !message || !generateButton) {
+        alert("Required HTML elements are missing!");
+        return;
+    }
+
+    // VIDEO SELECTION AND PREVIEW
 
     uploadInput.addEventListener("change", function () {
 
         const file = uploadInput.files[0];
 
+        uploadedFilename = null;
+        uploadedFile = null;
+
         if (!file) return;
 
         if (!file.type.startsWith("video/")) {
-            status.textContent = "Please select a valid video.";
+            message.textContent = "Please select a valid video.";
             return;
         }
 
@@ -94,18 +43,154 @@ loadInput = document.createElement("input");
         currentVideoURL = URL.createObjectURL(file);
 
         preview.src = currentVideoURL;
-        preview.style.display = "block";
+        preview.hidden = false;
+        preview.load();
 
-        status.textContent =
-            "Video selected: " + file.name;
+        message.textContent =
+            "Video selected! Press Generate Clips to continue.";
 
-        console.log("CLIP YS AI: Video loaded", file.name);
     });
 
+    // UPLOAD VIDEO
+
+    async function uploadVideo(file) {
+
+        message.textContent = "Connecting to server...";
+
+        const formData = new FormData();
+        formData.append("video", file);
+
+        const controller = new AbortController();
+
+        const timeout = setTimeout(function () {
+            controller.abort();
+        }, 180000);
+
+        try {
+
+            message.textContent = "Uploading video... Please wait.";
+
+            const response = await fetch(API + "/upload", {
+                method: "POST",
+                body: formData,
+                signal: controller.signal
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Upload failed");
+            }
+
+            if (!result.filename) {
+                throw new Error("Server did not return a filename.");
+            }
+
+            uploadedFilename = result.filename;
+            uploadedFile = file;
+
+            message.textContent = "Video uploaded successfully!";
+
+            return uploadedFilename;
+
+        } catch (error) {
+
+            if (error.name === "AbortError") {
+                throw new Error("Upload timed out. Please try again.");
+            }
+
+            throw error;
+
+        } finally {
+            clearTimeout(timeout);
+        }
+    }
+
+    // GENERATE CLIPS
+
+    generateButton.addEventListener("click", async function () {
+
+        const file = uploadInput.files[0];
+
+        if (!file) {
+            message.textContent = "Please select a video first!";
+            return;
+        }
+
+        if (isProcessing) return;
+
+        isProcessing = true;
+        generateButton.disabled = true;
+
+        try {
+
+            // Upload only if needed
+
+            if (!uploadedFilename || uploadedFile !== file) {
+                await uploadVideo(file);
+            }
+
+            message.textContent = "Generating clips... Please wait.";
+
+            const controller = new AbortController();
+
+            const timeout = setTimeout(function () {
+                controller.abort();
+            }, 600000);
+
+            try {
+
+                const response = await fetch(API + "/generate", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        filename: uploadedFilename
+                    }),
+                    signal: controller.signal
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || "Generation failed");
+                }
+
+                message.textContent =
+                    "Success! " + result.clips.length +
+                    " clips generated: " + result.clips.join(", ");
+
+            } finally {
+                clearTimeout(timeout);
+            }
+
+        } catch (error) {
+
+            if (error.name === "AbortError") {
+                message.textContent =
+                    "Request timed out. Please try again.";
+            } else {
+                message.textContent = "Error: " + error.message;
+            }
+
+        } finally {
+
+            isProcessing = false;
+            generateButton.disabled = false;
+
+        }
+
+    });
+
+    // CLEANUP
+
     window.addEventListener("beforeunload", function () {
+
         if (currentVideoURL) {
             URL.revokeObjectURL(currentVideoURL);
         }
+
     });
 
 });

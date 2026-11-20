@@ -1,5 +1,7 @@
-from flask import Flask, request, jsonify
+
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 import subprocess
 import os
 import uuid
@@ -15,19 +17,21 @@ os.makedirs(CLIPS_FOLDER, exist_ok=True)
 
 app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024 * 1024
 
+ALLOWED_EXTENSIONS = [".mp4", ".mov", ".mkv", ".webm"]
+
 
 @app.route("/")
 def home():
     return jsonify({
         "name": "Clip YS AI",
-        "status": "Backend is ready"
+        "status": "Backend is ready",
+        "version": "2.0"
     })
 
 
+# VIDEO UPLOAD
 @app.route("/upload", methods=["POST"])
 def upload_video():
-
-    print("UPLOAD REQUEST RECEIVED", flush=True)
 
     if "video" not in request.files:
         return jsonify({"error": "No video selected"}), 400
@@ -39,7 +43,7 @@ def upload_video():
 
     extension = os.path.splitext(video.filename)[1].lower()
 
-    if extension not in [".mp4", ".mov", ".mkv", ".webm"]:
+    if extension not in ALLOWED_EXTENSIONS:
         return jsonify({"error": "Unsupported video format"}), 400
 
     filename = str(uuid.uuid4()) + extension
@@ -47,7 +51,6 @@ def upload_video():
 
     try:
         video.save(filepath)
-        print("UPLOAD SAVED:", filename, flush=True)
 
     except Exception as error:
         print("UPLOAD ERROR:", str(error), flush=True)
@@ -59,6 +62,7 @@ def upload_video():
     })
 
 
+# GENERATE CLIPS
 @app.route("/generate", methods=["POST"])
 def generate_clips():
 
@@ -73,11 +77,9 @@ def generate_clips():
     if not os.path.isfile(filepath):
         return jsonify({"error": "Video not found"}), 404
 
-    output_folder = os.path.join(
-        CLIPS_FOLDER,
-        os.path.splitext(filename)[0]
-    )
+    video_id = os.path.splitext(filename)[0]
 
+    output_folder = os.path.join(CLIPS_FOLDER, video_id)
     os.makedirs(output_folder, exist_ok=True)
 
     output_pattern = os.path.join(
@@ -116,7 +118,7 @@ def generate_clips():
 
     except subprocess.TimeoutExpired:
         return jsonify({
-            "error": "Video processing timed out"
+            "error": "Processing timed out"
         }), 504
 
     except Exception as error:
@@ -137,11 +139,42 @@ def generate_clips():
 
     return jsonify({
         "message": "Clips generated successfully",
+        "video_id": video_id,
         "clips": clips,
         "count": len(clips)
     })
 
 
+# DOWNLOAD CLIP
+@app.route("/download/<video_id>/<clip_name>", methods=["GET"])
+def download_clip(video_id, clip_name):
+
+    if not video_id or secure_filename(video_id) != video_id:
+        return jsonify({"error": "Invalid video ID"}), 400
+
+    if (
+        not clip_name.startswith("clip_")
+        or not clip_name.endswith(".mp4")
+        or secure_filename(clip_name) != clip_name
+    ):
+        return jsonify({"error": "Invalid clip name"}), 400
+
+    output_folder = os.path.join(CLIPS_FOLDER, video_id)
+
+    clip_path = os.path.join(output_folder, clip_name)
+
+    if not os.path.isfile(clip_path):
+        return jsonify({"error": "Clip not found"}), 404
+
+    return send_from_directory(
+        output_folder,
+        clip_name,
+        as_attachment=True,
+        download_name=clip_name
+    )
+
+
+# FILE SIZE ERROR
 @app.errorhandler(413)
 def too_large(error):
     return jsonify({
@@ -149,7 +182,9 @@ def too_large(error):
     }), 413
 
 
+# START SERVER
 if __name__ == "__main__":
+
     port = int(os.environ.get("PORT", 5000))
 
     app.run(

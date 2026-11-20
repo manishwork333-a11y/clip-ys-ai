@@ -1,5 +1,5 @@
 
-/* CLIP YS AI - UPLOAD AND GENERATE */
+/* CLIP YS AI - UPLOAD DIAGNOSTIC SYSTEM */
 
 document.addEventListener("DOMContentLoaded", function () {
 
@@ -38,57 +38,66 @@ document.addEventListener("DOMContentLoaded", function () {
         preview.load();
 
         message.textContent =
-            "Video selected. Press Generate Clips.";
+            "Video selected: " +
+            (selectedFile.size / (1024 * 1024)).toFixed(2) +
+            " MB. Press Generate Clips.";
 
     });
 
     async function uploadVideo(file) {
 
-        message.textContent = "Checking server connection...";
+        message.textContent = "STEP 1: Checking server...";
 
-        const ping = await fetch(API + "/", {
-            method: "GET",
-            cache: "no-store"
-        });
+        let ping;
 
-        if (!ping.ok) {
-            throw new Error("Server connection failed.");
+        try {
+            ping = await fetch(API + "/", {
+                method: "GET",
+                cache: "no-store"
+            });
+        } catch (error) {
+            throw new Error("SERVER CONNECTION FAILED: " + error.message);
         }
 
-        message.textContent = "Uploading video. Please wait...";
+        if (!ping.ok) {
+            throw new Error("SERVER ERROR: " + ping.status);
+        }
+
+        message.textContent = "STEP 2: Sending video to server...";
 
         const formData = new FormData();
         formData.append("video", file);
 
-        const controller = new AbortController();
-
-        const timeout = setTimeout(() => {
-            controller.abort();
-        }, 600000);
+        let response;
 
         try {
-
-            const response = await fetch(API + "/upload", {
+            response = await fetch(API + "/upload", {
                 method: "POST",
-                body: formData,
-                signal: controller.signal
+                body: formData
             });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || "Upload failed.");
-            }
-
-            if (!result.filename) {
-                throw new Error("Server filename missing.");
-            }
-
-            return result.filename;
-
-        } finally {
-            clearTimeout(timeout);
+        } catch (error) {
+            throw new Error("UPLOAD CONNECTION FAILED: " + error.message);
         }
+
+        message.textContent = "STEP 3: Server received a response.";
+
+        let result;
+
+        try {
+            result = await response.json();
+        } catch (error) {
+            throw new Error("SERVER RETURNED INVALID RESPONSE.");
+        }
+
+        if (!response.ok) {
+            throw new Error(result.error || "UPLOAD ERROR " + response.status);
+        }
+
+        if (!result.filename) {
+            throw new Error("SERVER DID NOT RETURN A FILENAME.");
+        }
+
+        return result.filename;
     }
 
     generateButton.addEventListener("click", async function () {
@@ -107,7 +116,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const filename = await uploadVideo(selectedFile);
 
-            message.textContent = "Video uploaded! Generating clips...";
+            message.textContent = "UPLOAD SUCCESS! Generating clips...";
 
             const response = await fetch(API + "/generate", {
                 method: "POST",
@@ -122,20 +131,16 @@ document.addEventListener("DOMContentLoaded", function () {
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.error || "Generation failed.");
+                throw new Error(result.error || "GENERATION FAILED.");
             }
 
             message.textContent =
-                "Generated " + result.clips.length +
-                " clips: " + result.clips.join(", ");
+                "SUCCESS! " + result.clips.length +
+                " clips generated: " + result.clips.join(", ");
 
         } catch (error) {
 
-            if (error.name === "AbortError") {
-                message.textContent = "Upload timed out. Try again.";
-            } else {
-                message.textContent = "Error: " + error.message;
-            }
+            message.textContent = "ERROR: " + error.message;
 
         } finally {
 
@@ -151,4 +156,3 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 });
-                    

@@ -1,5 +1,5 @@
 
-/* CLIP YS AI - UPLOAD DIAGNOSTIC SYSTEM */
+/* CLIP YS AI - COMPLETE UPLOAD, GENERATE AND DOWNLOAD SYSTEM */
 
 document.addEventListener("DOMContentLoaded", function () {
 
@@ -19,20 +19,38 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
     }
 
+    // CLIP RESULTS AREA
+    const results = document.createElement("div");
+    results.id = "clipResults";
+    results.style.marginTop = "20px";
+    results.style.display = "flex";
+    results.style.flexDirection = "column";
+    results.style.gap = "12px";
+
+    message.insertAdjacentElement("afterend", results);
+
+
+    // VIDEO SELECTION
     uploadInput.addEventListener("change", function () {
 
         selectedFile = uploadInput.files[0];
+
+        results.innerHTML = "";
 
         if (!selectedFile) return;
 
         if (!selectedFile.type.startsWith("video/")) {
             message.textContent = "Please select a valid video.";
+            selectedFile = null;
             return;
         }
 
-        if (videoURL) URL.revokeObjectURL(videoURL);
+        if (videoURL) {
+            URL.revokeObjectURL(videoURL);
+        }
 
         videoURL = URL.createObjectURL(selectedFile);
+
         preview.src = videoURL;
         preview.hidden = false;
         preview.load();
@@ -44,6 +62,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     });
 
+
+    // UPLOAD VIDEO
     async function uploadVideo(file) {
 
         message.textContent = "STEP 1: Checking server...";
@@ -55,15 +75,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 method: "GET",
                 cache: "no-store"
             });
+
         } catch (error) {
-            throw new Error("SERVER CONNECTION FAILED: " + error.message);
+            throw new Error("SERVER CONNECTION FAILED");
         }
 
         if (!ping.ok) {
             throw new Error("SERVER ERROR: " + ping.status);
         }
 
-        message.textContent = "STEP 2: Sending video to server...";
+        message.textContent = "STEP 2: Uploading video...";
 
         const formData = new FormData();
         formData.append("video", file);
@@ -75,31 +96,26 @@ document.addEventListener("DOMContentLoaded", function () {
                 method: "POST",
                 body: formData
             });
+
         } catch (error) {
-            throw new Error("UPLOAD CONNECTION FAILED: " + error.message);
+            throw new Error("UPLOAD CONNECTION FAILED");
         }
 
-        message.textContent = "STEP 3: Server received a response.";
-
-        let result;
-
-        try {
-            result = await response.json();
-        } catch (error) {
-            throw new Error("SERVER RETURNED INVALID RESPONSE.");
-        }
+        const result = await response.json();
 
         if (!response.ok) {
-            throw new Error(result.error || "UPLOAD ERROR " + response.status);
+            throw new Error(result.error || "UPLOAD FAILED");
         }
 
         if (!result.filename) {
-            throw new Error("SERVER DID NOT RETURN A FILENAME.");
+            throw new Error("VIDEO FILENAME NOT RECEIVED");
         }
 
         return result.filename;
     }
 
+
+    // GENERATE CLIPS
     generateButton.addEventListener("click", async function () {
 
         if (busy) return;
@@ -111,6 +127,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         busy = true;
         generateButton.disabled = true;
+        results.innerHTML = "";
 
         try {
 
@@ -131,12 +148,54 @@ document.addEventListener("DOMContentLoaded", function () {
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.error || "GENERATION FAILED.");
+                throw new Error(result.error || "GENERATION FAILED");
+            }
+
+            if (!result.video_id || !Array.isArray(result.clips)) {
+                throw new Error("INVALID CLIP RESPONSE");
             }
 
             message.textContent =
-                "SUCCESS! " + result.clips.length +
-                " clips generated: " + result.clips.join(", ");
+                "SUCCESS! " + result.count + " clips generated.";
+
+            // CREATE DOWNLOAD LINKS
+            result.clips.forEach(function (clipName) {
+
+                const card = document.createElement("div");
+
+                card.style.padding = "15px";
+                card.style.border = "1px solid #444";
+                card.style.borderRadius = "12px";
+
+                const title = document.createElement("p");
+                title.textContent = clipName;
+                title.style.marginBottom = "10px";
+
+                const download = document.createElement("a");
+
+                download.href =
+                    API + "/download/" +
+                    encodeURIComponent(result.video_id) + "/" +
+                    encodeURIComponent(clipName);
+
+                download.textContent = "Download " + clipName;
+                download.download = clipName;
+                download.target = "_blank";
+                download.rel = "noopener";
+
+                download.style.display = "inline-block";
+                download.style.padding = "10px 16px";
+                download.style.background = "#2563eb";
+                download.style.color = "#ffffff";
+                download.style.borderRadius = "8px";
+                download.style.textDecoration = "none";
+
+                card.appendChild(title);
+                card.appendChild(download);
+
+                results.appendChild(card);
+
+            });
 
         } catch (error) {
 
@@ -151,8 +210,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     });
 
+
+    // CLEAN UP PREVIEW
     window.addEventListener("beforeunload", function () {
-        if (videoURL) URL.revokeObjectURL(videoURL);
+
+        if (videoURL) {
+            URL.revokeObjectURL(videoURL);
+        }
+
     });
 
 });

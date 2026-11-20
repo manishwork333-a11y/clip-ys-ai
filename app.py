@@ -74,20 +74,18 @@ def generate_clips():
         "clip_%03d.mp4"
     )
 
-    command = [
+        command = [
         "ffmpeg", "-y",
         "-i", filepath,
         "-map", "0:v:0",
         "-map", "0:a?",
-        "-c:v", "libx264",
-        "-preset", "veryfast",
-        "-crf", "23",
-        "-c:a", "aac",
+        "-c", "copy",
         "-f", "segment",
         "-segment_time", "30",
         "-reset_timestamps", "1",
+        "-segment_format", "mp4",
         output_pattern
-    ]
+        ]
 
     result = subprocess.run(
         command,
